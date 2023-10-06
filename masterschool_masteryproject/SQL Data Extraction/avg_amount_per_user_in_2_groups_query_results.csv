@@ -1,0 +1,27 @@
+ccr,tcr
+3.365673171,3.381245061
+Num of users in group A (n1),24343
+Num of users in group B (n2),24600
+Total Num Users,48943
+Num converted A,950
+Num converted B,1147
+,
+s1,17.965
+s2,17.661
+s1*s1,322.741225
+s2*s2,311.910921
+B10/n1+B11/n2,0.025937377
+sqrt of B13,0.161050852
+T(test statistic),0.096689275
+df,24342
+C,13.09799396
+p value,0.922973953
+Reject Null Hypothesis,Do not Reject Null Hypothesis
+,
+What is the 95% confidence interval for the difference in the average amount spent per user between the treatment and the control (treatment-control)?,
+sample statistic,0.01557189
+df,24342
+standard error,0.161050852
+t value,1.960061445
+lower bound,-0.331241455
+upper bound,0.300097675

@@ -1,0 +1,177 @@
+The Dataset
+GloBox stores its data in a relational database, which you can access here:
+
+🔗
+Link to database
+⚠️
+Bit.io announced that they are planning to shut down their database service on June 30th. We are in the process of moving to a new database solution. If you are having any issues accessing the data through bit.io, you can access the dataset through the Excel file below.
+A_B Testing.xlsx1718.4KB
+
+You can find a description of each table and its columns below.
+
+users: user demographic information
+id: the user ID
+country: ISO 3166 alpha-3 country code
+gender: the user's gender (M = male, F = female, O = other)
+groups: user A/B test group assignment
+uid: the user ID
+group: the user’s test group
+join_dt: the date the user joined the test (visited the page)
+device: the device the user visited the page on (I = iOS, A = android)
+activity: user purchase activity, containing 1 row per day that a user made a purchase
+uid: the user ID
+dt: date of purchase activity
+device: the device type the user purchased on (I = iOS, A = android)
+spent: the purchase amount in USD
+
+image
+Key things to note:
+
+All users should be assigned to one A/B test group
+Not all users make a purchase
+Purchase activity is for all product categories, not just food and drinkThe Dataset
+GloBox stores its data in a relational database, which you can access here:
+
+🔗
+Link to database
+⚠️
+Bit.io announced that they are planning to shut down their database service on June 30th. We are in the process of moving to a new database solution. If you are having any issues accessing the data through bit.io, you can access the dataset through the Excel file below.
+A_B Testing.xlsx1718.4KB
+
+You can find a description of each table and its columns below.
+
+users: user demographic information
+id: the user ID
+country: ISO 3166 alpha-3 country code
+gender: the user's gender (M = male, F = female, O = other)
+groups: user A/B test group assignment
+uid: the user ID
+group: the user’s test group
+join_dt: the date the user joined the test (visited the page)
+device: the device the user visited the page on (I = iOS, A = android)
+activity: user purchase activity, containing 1 row per day that a user made a purchase
+uid: the user ID
+dt: date of purchase activity
+device: the device type the user purchased on (I = iOS, A = android)
+spent: the purchase amount in USD
+
+image
+Key things to note:
+
+All users should be assigned to one A/B test group
+Not all users make a purchase
+Purchase activity is for all product categories, not just food and drink
+
+1. Can a user show up more than once in the activity table? Yes or no, and why?
+select uid from activity;
+Result:223
+select distinct uid from activity;
+Result:209
+so, the user can show more than once in the activity table. the user appears to be intersted in buying the products.
+
+2.What type of join should we use to join the users table to the activity table?
+SELECT *
+from "users"
+left join "activity"
+on users.id = activity.uid;
+
+we can either use inner join or right join to join users table to the activity table.
+for both
+Result:223
+
+3.What SQL function can we use to fill in NULL values?
+COALESCE() to replace NULL values.
+
+4.What are the start and end dates of the experiment?
+select min(dt) as start_date, max(dt) as end_date
+from "activity";
+Result:
+start_date	end_date
+2023-01-25	2023-02-06
+
+5.How many total users were in the experiment?
+select COUNT(id)
+from "users"
+Result:48943
+
+6.How many users were in the control and treatment groups?
+select "group", count(uid)
+from "groups"
+group by "group";
+Result:
+group	count
+A	24343
+B	24600
+
+7.What was the conversion rate of all users?
+which 2 tables need to join
+activity and users
+with CTE as
+(select distinct users.id,
+case 
+    when (activity.spent is not null) then '1'
+    else '0' 
+end as user_converted   
+from "users"
+left join "activity"
+on activity.uid = users.id
+group by users.id, activity.spent)
+select Round((avg(user_converted::int)*100),2) as conv_rate
+from CTE;
+Result:
+conv_rate
+4.27844635596510226200
+
+-----------------------------
+8.What is the user conversion rate for the control and treatment groups?
+with CTE as
+(select distinct users.id, groups.team,
+case 
+    when (activity.spent is not null and groups.team = 'A') then '1'
+    else '0' 
+end as control_converted,
+case when (activity.spent is not null and groups.team = 'B') then '1'
+    else '0' 
+end as treatment_converted
+from users
+left join activity
+on activity.uid = users.id
+left join "groups"
+on activity.uid = groups.uid
+group by users.id, activity.spent,groups.team)
+select round((avg(control_converted::int)*100),2)*2 as ccr, round((avg(treatment_converted::int)*100),2)*2 as tcr
+from CTE;
+Result:
+ccr		tcr
+3.90%		4.66%
+
+----------------
+9.What is the average amount spent per user for the control and treatment groups, including users who did not convert?
+
+with CTE as 
+(select groups.uid, groups.group,coalesce(sum(activity.spent),0) as total_amt_spent
+from groups
+left join activity
+on groups.uid = activity.uid
+group by groups.uid)
+select CTE.group, avg(total_amt_spent)
+from CTE
+group by CTE.group;
+REsults:
+Group A		3.39
+Group B		3.37
+
+
+Write a SQL query that returns: the user ID, the user’s country, the user’s gender, the user’s device type, the user’s test group, whether or not they converted (spent > $0), and how much they spent in total ($0+). 
+select users.id, users.country, users.gender, groups.device,coalesce(sum(activity.spent),0) as total_amount_spent,
+case 
+when (sum(activity.spent) > 0) then '1'
+else '0'
+end as converted 
+from users
+left join groups
+on users.id = groups.uid
+left join activity
+on groups.uid = activity.uid
+group by users.id, users.country,users.gender,groups.device;
+
